@@ -3,19 +3,19 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class TuringMachine {
-    int header = 0;
+    int header;
     int alphabetSize;
     int numberOfState = 1;
     char symbol;
     boolean stopped = false;
     int n = 0;
     String alphabet, output, inputTape;
-    String inputFileOfStates, inputFileOfTape;
     List<String> inputStates = new ArrayList<>();
 
-    public void start(String inputFileOfStates, String inputFileOfTape){
+    public void start(boolean initialPosition, String inputFileOfStates, String inputFileOfTape){
         readStates(inputFileOfStates);
         readInputTape(inputFileOfTape);
+        endOrBeginning(initialPosition);
         parseString();
         printResult();
     }
@@ -24,8 +24,17 @@ public class TuringMachine {
         stopped = true;
     }
 
+    void endOrBeginning(boolean initialPosition){
+        if (initialPosition != true){
+            header = inputTape.length() - 1;
+        }
+        else {
+            header = 0;
+        }
+    }
+
     void printResult(){
-        System.out.println(inputTape);
+        System.out.println(inputTape); // вывод в текстовый файл пока не стал делать
     }
 
     void moveLeft() {

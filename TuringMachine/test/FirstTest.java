@@ -10,12 +10,12 @@ public class FirstTest {
     @Test
     public void firstTest() {
         TuringMachine turing = new TuringMachine();
-        turing.start("inputStates.txt", "inputTape.txt");
+        turing.start(true, "inputStates.txt", "inputTape.txt");
     }
 
     @Test
     public void secondTest() {
         TuringMachine turing = new TuringMachine();
-        turing.start("inputStates2.txt", "inputTape2.txt");
+        turing.start(false, "inputStates2.txt", "inputTape2.txt");
     }
 }
