@@ -1,23 +1,24 @@
 import java.io.*;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 class TuringMachine {
+    private String alphabet = null;
     private int header;
     private int numberOfState = 1;
     private char symbol;
     private boolean stopped = false;
-    private int n = 0;
+    private int numberOfSteps = 1000;
     private String inputTape = null;
     private List<String> inputStates = new ArrayList<>();
+    private List<String> intermediateConfigurations = new ArrayList<>();
 
-    void start(int initialPosition, String inputFileOfStates, String inputFileOfTape){
+    void start(int initialPosition, String inputFileOfAlphabet, String inputFileOfStates, String inputFileOfTape){
         readStates(inputFileOfStates);
-        readInputTape(inputFileOfTape);
-        initialHeaderPosition(initialPosition);
-        if (!stopped) {
-            parseString();
-        }
+        if (!stopped) readInputTape(inputFileOfTape);
+        if (!stopped) readAlphabet(inputFileOfAlphabet);
+        if (!stopped) initialHeaderPosition(initialPosition);
+        if (!stopped) parseString();
+        printConfig();
         printResult();
     }
 
@@ -26,24 +27,25 @@ class TuringMachine {
     }
 
     private void initialHeaderPosition(int initialPosition){
-        if (!stopped) {
-            if (initialPosition == -1) {
-                header = inputTape.length() - 1;
+        if (initialPosition == -1) {
+            header = inputTape.length() - 1;
+        } else {
+            if (initialPosition >= inputTape.length() || initialPosition < 0) {
+                inputTape = "Неверно указано начальное положение головки машины";
+                stop();
             } else {
-                if (initialPosition >= inputTape.length() || initialPosition < 0) {
-                    inputTape = "Неверно указано начальное положение головки машины";
-                    stop();
-                } else {
-                    header = initialPosition;
-                }
+                header = initialPosition;
             }
         }
     }
 
+    void changeNumberOfSteps(int number) {
+        numberOfSteps = number;
+    }
+
     private void printResult(){
         try {
-            String outputFile = "output.txt";
-            File text = new File(outputFile);
+            File text = new File("output.txt");
             FileWriter writeText = new FileWriter(text);
             writeText.write(inputTape);
             System.out.println(inputTape);
@@ -52,7 +54,22 @@ class TuringMachine {
         catch (IOException e) {
             e.printStackTrace();
         }
-        System.out.println(inputTape);
+    }
+
+    private void printConfig(){
+        try {
+            File text = new File("intermediateConfigurations.txt");
+            FileWriter writeText = new FileWriter(text);
+            for (String intermediateConfiguration : intermediateConfigurations) {
+                writeText.write(intermediateConfiguration);
+                writeText.write("\n");
+            }
+            System.out.println(inputTape);
+            writeText.close();
+        }
+        catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void moveLeft() {
@@ -109,12 +126,13 @@ class TuringMachine {
             FileReader readText = new FileReader(text);
             BufferedReader readerOfText = new BufferedReader(readText);
             inputTape = readerOfText.readLine();
-            System.out.println("input = " + inputTape);
+            System.out.println("Лента: " + inputTape);
             readText.close();
             if (inputTape == null){
                 inputTape = "Входной файл с лентой пуст";
                 stop();
             }
+            intermediateConfigurations.add("Входная лента:" + inputTape);
         }
         catch (FileNotFoundException e) {
             inputTape = "Входной файл с лентой не был найден";
@@ -124,55 +142,132 @@ class TuringMachine {
         }
     }
 
-    private void parseString() {
-        String str = "";
-        String temp = inputStates.get(numberOfState - 1);
-        int i = 0;
+    private void readAlphabet(String alphabetFile) {
         try {
-            while (i < temp.length() && numberOfState != 0) {
-                if (inputTape.charAt(header) != temp.charAt(i)) {
-                    while (temp.charAt(i) != (' ')) {
+            int i = 0;
+            File text = new File(alphabetFile);
+            FileReader readText = new FileReader(text);
+            BufferedReader readerOfText = new BufferedReader(readText);
+            alphabet = readerOfText.readLine();
+            readText.close();
+            Set<Character> set = new HashSet<>();
+            StringBuilder sb = new StringBuilder();
+            if (alphabet == null){
+                inputTape = "Входной файл с алфавитом пуст";
+                stop();
+            }
+            else {
+                while (i <= alphabet.length() - 1){
+                    if (alphabet.charAt(i) < '0' || alphabet.charAt(i) > '9') {
+                        inputTape = "В алфавите должны быть только цифры";
+                        stop();
+                        break;
+                    }
+                    i++;
+                }
+                for (char c: alphabet.toCharArray())
+                {
+                    if (!set.contains(c))
+                    {
+                        set.add(c);
+                        sb.append(c);
+                    }
+                }
+                alphabet = sb.toString();
+                intermediateConfigurations.add("Алфавит:" + alphabet);
+                System.out.println("Алфавит = " + alphabet);
+                alphabet += "_";
+            }
+        }
+        catch (FileNotFoundException e) {
+            inputTape = "Входной файл с алфавитом не был найден";
+            stop();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void parseString() {
+        String stringOfNumberOfState = "";
+        String currentState = inputStates.get(numberOfState - 1);
+        StringBuilder temp = new StringBuilder();
+        intermediateConfigurations.add("Текущее состояние:" + numberOfState);
+        int i = 0;
+        int j = 0;
+        boolean isReplacingAlphabetSymbol = false;
+        boolean isFungibleAlphabetSymbol = false;
+        try {
+            while (i < currentState.length() && numberOfState != 0) {
+                if (inputTape.charAt(header) != currentState.charAt(i)) {
+                    while (currentState.charAt(i) != (' ')) {
                         i++;
                     }
                     i++;
                 } else {
+                    temp.append(currentState.charAt(i)).append(" заменяется на символ ");
+                    while (j < alphabet.length()) {
+                        if (currentState.charAt(i) == alphabet.charAt(j)) isFungibleAlphabetSymbol = true;
+                        if (currentState.charAt(i + 2) == alphabet.charAt(j)) isReplacingAlphabetSymbol = true;
+                        j++;
+                    }
+                    if (!isReplacingAlphabetSymbol || !isFungibleAlphabetSymbol) {
+                        inputTape = "Найден неизвестный символ";
+                        stop();
+                        break;
+                    }
                     i = i + 2;
-                    if (temp.charAt(i) >= '0' && temp.charAt(i) <= '9' || temp.charAt(i) == '_') {
-                        symbol = temp.charAt(i);
+                    temp.append(currentState.charAt(i));
+                    if (currentState.charAt(i) >= '0' && currentState.charAt(i) <= '9'
+                            || currentState.charAt(i) == '_') {
+                        symbol = currentState.charAt(i);
                         i++;
                     }
                     if (inputTape.charAt(header) != symbol) {
                         changeSymbol(symbol);
                     }
-                    if (temp.charAt(i) == '>') {
+                    if (currentState.charAt(i) == '>') {
                         moveRight();
+                        temp.append(" и происходит сдвиг вправо");
                     }
-                    if (temp.charAt(i) == '<') {
+                    if (currentState.charAt(i) == '<') {
                         moveLeft();
+                        temp.append(" и происходит сдвиг влево");
                     }
                     i++;
-                    while (temp.charAt(i) >= '0' && temp.charAt(i) <= '9') {
-                        str += temp.charAt(i);
+                    while (currentState.charAt(i) >= '0' && currentState.charAt(i) <= '9') {
+                        stringOfNumberOfState += currentState.charAt(i);
                         i++;
-                        if (i >= temp.length()) {
+                        if (i >= currentState.length()) {
                             break;
                         }
                     }
-                    numberOfState = Integer.parseInt(str);
-                    if (i >= temp.length() || temp.charAt(i) == ' ') {
+                    if (numberOfState == Integer.parseInt(stringOfNumberOfState)) {
+                        temp.append(", состояние не меняется");
+                    }
+                    else {
+                        temp.append(", состояние меняется на ").append(Integer.parseInt(stringOfNumberOfState));
+                    }
+                    numberOfState = Integer.parseInt(stringOfNumberOfState);
+                    if (i >= currentState.length() || currentState.charAt(i) == ' ') {
                         break;
                     }
+
                 }
             }
+            intermediateConfigurations.add(temp.toString());
+            intermediateConfigurations.add("Лента  машины  принимает вид:" + inputTape);
+            StringBuilder supportingTape = new StringBuilder(inputTape);
+            supportingTape.setCharAt(header, '*');
+            intermediateConfigurations.add("Текущий элемент  отмечен '*':" + supportingTape);
         }
-        catch (StringIndexOutOfBoundsException e) {
+        catch (StringIndexOutOfBoundsException | NumberFormatException e) {
             inputTape = "Ошибка в файле с входными состояниями";
             stop();
         }
-        n++;
+        numberOfSteps--;
         if (numberOfState == 0) {
             stop();
         }
-        if (!stopped && n != 1000) parseString();
+        if (!stopped && numberOfSteps != 0) parseString();
     }
 }
