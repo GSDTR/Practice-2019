@@ -132,6 +132,13 @@ class TuringMachine {
                 inputTape = "Входной файл с лентой пуст";
                 stop();
             }
+            try {
+                Integer.parseInt(inputTape.replaceAll("_", "0"));
+            }
+            catch (NumberFormatException e){
+                stop();
+                inputTape = "Во входной ленте найдены неизвестные символы";
+            }
             intermediateConfigurations.add("Входная лента:" + inputTape);
         }
         catch (FileNotFoundException e) {
